@@ -7,7 +7,7 @@ require("dotenv").config();
 app.use(cors());
 app.use(express.json());
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.esabfel.mongodb.net/?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, {
@@ -21,6 +21,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const roomsCollection = client.db("galaxyDB").collection("rooms");
+    const bookingCollection = client.db("galaxyDB").collection("booking");
 
     await client.connect();
 
@@ -32,6 +33,33 @@ async function run() {
           .find()
           .sort({ price: sort })
           .toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    app.get("/rooms/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const query = { _id: new ObjectId(id) };
+      console.log(query);
+      const result = await roomsCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.get("/booking", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookingCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.post("/booking", async (req, res) => {
+      try {
+        const bookingInfo = req.body;
+        console.log(bookingInfo);
+        const result = await bookingCollection.insertOne(bookingInfo);
         res.send(result);
       } catch (err) {
         console.log(err);
