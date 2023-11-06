@@ -114,7 +114,7 @@ async function run() {
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("Galaxy Server is running perfect");
+  res.send("Galaxy Server is running perfect!");
 });
 
 app.listen(port, () => {
