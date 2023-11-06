@@ -23,7 +23,9 @@ async function run() {
     const roomsCollection = client.db("galaxyDB").collection("rooms");
     const bookingCollection = client.db("galaxyDB").collection("booking");
 
-    await client.connect();
+    // await client.connect();
+
+    // Rooms API
 
     app.get("/rooms", async (req, res) => {
       try {
@@ -41,29 +43,40 @@ async function run() {
 
     app.get("/rooms/:id", async (req, res) => {
       const id = req.params.id;
-      console.log(id);
       const query = { _id: new ObjectId(id) };
-      console.log(query);
       const result = await roomsCollection.findOne(query);
       res.send(result);
     });
 
+    // Bookings API
     app.get("/booking", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await bookingCollection.findOne(query);
-      res.send(result);
+      try {
+        const cursor = bookingCollection.find();
+        const result = await cursor.toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
     });
 
     app.post("/booking", async (req, res) => {
       try {
         const bookingInfo = req.body;
         console.log(bookingInfo);
+        console.log(req.body.available);
+        const available = parseInt(req.body.available);
         const result = await bookingCollection.insertOne(bookingInfo);
         res.send(result);
       } catch (err) {
         console.log(err);
       }
+    });
+
+    app.delete("/booking/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: id };
+      const result = await bookingCollection.deleteOne(query);
+      res.send(result);
     });
 
     await client.db("admin").command({ ping: 1 });
