@@ -59,17 +59,41 @@ async function run() {
       }
     });
 
+    app.get("/booking/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: id };
+      const result = await bookingCollection.findOne(query);
+      res.send(result);
+    });
+
     app.post("/booking", async (req, res) => {
       try {
         const bookingInfo = req.body;
         console.log(bookingInfo);
-        console.log(req.body.available);
-        const available = parseInt(req.body.available);
         const result = await bookingCollection.insertOne(bookingInfo);
         res.send(result);
       } catch (err) {
         console.log(err);
       }
+    });
+
+    app.put("/booking/:id", async (req, res) => {
+      const newDate = req.body;
+      const id = req.params.id;
+      const filter = { _id: id };
+      const options = { upsert: true };
+      const updateDate = {
+        $set: {
+          checkIn: newDate.checkIn,
+          checkOut: newDate.checkOut,
+        },
+      };
+      const result = await bookingCollection.updateOne(
+        filter,
+        updateDate,
+        options
+      );
+      res.send(result);
     });
 
     app.delete("/booking/:id", async (req, res) => {
