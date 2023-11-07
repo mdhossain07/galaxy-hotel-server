@@ -22,7 +22,7 @@ async function run() {
   try {
     const roomsCollection = client.db("galaxyDB").collection("rooms");
     const bookingCollection = client.db("galaxyDB").collection("booking");
-
+    const reviewCollection = client.db("galaxyDB").collection("review");
     // await client.connect();
 
     // Rooms API
@@ -110,6 +110,15 @@ async function run() {
       const id = req.params.id;
       const query = { _id: id };
       const result = await bookingCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // Reveiws API
+
+    app.post("/review", async (req, res) => {
+      const review = req.body;
+      console.log(review);
+      const result = await reviewCollection.insertOne(review);
       res.send(result);
     });
 
