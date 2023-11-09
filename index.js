@@ -1,14 +1,18 @@
 const express = require("express");
+const app = express();
 const cors = require("cors");
+require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const app = express();
-const port = process.env.port || 5001;
-require("dotenv").config();
+const port = process.env.PORT || 5001;
 
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: [
+      "http://localhost:5173",
+      "https://galaxy-hotel-e2efd.web.app",
+      "https://galaxy-hotel-e2efd.firebaseapp.com",
+    ],
     credentials: true,
   })
 );
@@ -35,7 +39,7 @@ const verifyToken = (req, res, next) => {
   }
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) {
-      return res.status.send(401).send({ message: "unauthorized access" });
+      return res.status(401).send({ message: "unauthorized access" });
     }
     req.user = decoded;
     next();
@@ -62,8 +66,15 @@ async function run() {
       res
         .cookie("token", token, {
           httpOnly: true,
-          secure: false,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
+        // .clearCookie("token", { maxAge: 0, sameSite: "none", secure: true })
+        // .cookie("token", token, {
+        //   httpOnly: true,
+        //   secure: process.env.NODE === "production",
+        //   sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        // })
         .send({ success: true });
     });
 
@@ -102,6 +113,8 @@ async function run() {
     // });
 
     app.get("/booking", verifyToken, async (req, res) => {
+      // console.log(req.user);
+      // console.log(req.user.email, req.query.email);
       if (req.user?.email !== req.query.email) {
         return res.status(403).send({ message: "forbidden access" });
       }
@@ -114,51 +127,60 @@ async function run() {
       res.send(result);
     });
 
+    // Get single booking data
+
     app.get("/booking/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: id };
+      const query = { _id: new ObjectId(id) };
       const result = await bookingCollection.findOne(query);
       res.send(result);
     });
 
-    app.post("/booking", async (req, res) => {
-      try {
-        const bookingInfo = req.body;
-        console.log(bookingInfo);
-        const result = await bookingCollection.insertOne(bookingInfo);
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
     // app.post("/booking", async (req, res) => {
-    //   const { img, available, checkIn, checkOut, _id } = req.body;
-    //   const intBook = parseInt(available);
-    //   if (intBook > 0) {
-    //     const updateRoomNumber = intBook - 1;
-    //     const result = await bookingCollection.insertOne({
-    //       img,
-    //       available: updateRoomNumber,
-    //       checkIn,
-    //       checkOut,
-    //     });
-    //     const updateRoom = await roomsCollection.updateOne(
-    //       {id: _id},
-    //       {$inc: { intBook: -1 },
-    //     });
+    //   try {
+    //     const bookingInfo = req.body;
+    //     console.log(bookingInfo);
+    //     const result = await bookingCollection.insertOne(bookingInfo);
     //     res.send(result);
-    //     res.send(updateRoom);
-    //     console.log("booking successfull");
-    //   } else {
-    //     console.log("unsuccessfull");
+    //   } catch (err) {
+    //     console.log(err);
+    //     res.send({ message: "something went wrong!" });
     //   }
     // });
+
+    app.post("/booking", async (req, res) => {
+      try {
+        // const id = req.body.id;
+        // const number = req.body.available;
+        // // console.log(id);
+        // console.log(number);
+        const user = req.body;
+        const id = req.body.roomId;
+        console.log(user, id);
+
+        const query = { _id: new ObjectId(id), available: { $gt: 0 } };
+        console.log(query);
+        const updateRoomNumber = await roomsCollection.updateOne(query, {
+          $inc: { available: -1 },
+        });
+
+        console.log(updateRoomNumber);
+        if (updateRoomNumber.modifiedCount > 0) {
+          const bookingInfo = req.body;
+          console.log(bookingInfo);
+          const result = await bookingCollection.insertOne(bookingInfo);
+          res.send(result);
+        }
+      } catch (err) {
+        console.error(err);
+        res.send({ message: "something went wrong" });
+      }
+    });
 
     app.put("/booking/:id", async (req, res) => {
       const newDate = req.body;
       const id = req.params.id;
-      const filter = { _id: id };
+      const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const updateDate = {
         $set: {
@@ -176,7 +198,7 @@ async function run() {
 
     app.delete("/booking/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: id };
+      const query = { _id: new ObjectId(id) };
       const result = await bookingCollection.deleteOne(query);
       res.send(result);
     });
